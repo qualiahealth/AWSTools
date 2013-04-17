@@ -2,14 +2,10 @@ package HW1;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.sql.Timestamp;
 import java.util.Scanner;
-import java.util.UUID;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -28,6 +24,7 @@ public class CreateCredentials {
  
     private static BufferedWriter br;
     private static int option;
+    private static int optionB;
     private static AmazonS3 s3;
     private static String fName;
     private static String lName;
@@ -60,7 +57,11 @@ public class CreateCredentials {
 	        
 	        Scanner scn = new Scanner(System.in); 
 			System.out.println("Choose a number: ");
-			option = scn.nextInt();
+			try {
+				option = scn.nextInt();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+			}
 		
 			if(option == 1){
 				System.out.println();
@@ -95,7 +96,7 @@ public class CreateCredentials {
 				deleteBucket();
 			}
 			else{
-				System.out.println("Please select a valid option");
+				System.err.println("Please select a valid option");
 			}
 		}
     	
@@ -104,7 +105,7 @@ public class CreateCredentials {
     
     private static void setKeys() throws IOException{
     	
-    	//Ask users for AWS keys if this utility is used for the first time
+    	//Ask users for AWS keys
     	
     	System.out.println("Create AWS Keys");
         System.out.println("--------------------------\n");
@@ -144,6 +145,8 @@ public class CreateCredentials {
     
     private static void createBucket(){
     	
+    	//Creates bucket. If not unique- will ask to provide a unique bucket name
+    	
     	String bucketName;
     	
     	System.out.println("Create Bucket: ");
@@ -152,14 +155,23 @@ public class CreateCredentials {
 		Scanner scn = new Scanner(System.in); 
 		System.out.println("Choose a Bucket Name: ");
 		bucketName = scn.nextLine();
-		String bucketNameOriginal = bucketName + UUID.randomUUID();
+		String bucketNameOriginal = bucketName;
 		
-        System.out.println("Creating bucket " + bucketNameOriginal + "\n");
-        s3.createBucket(bucketNameOriginal);
+        System.out.println("Creating bucket ..." + bucketNameOriginal + "\n");
+        try {
+			s3.createBucket(bucketNameOriginal);
+			System.out.println("Success!");
+		} catch (AmazonServiceException e) {
+			// TODO Auto-generated catch block
+			System.err.println("Sorry, bucket name must be globally unique. Try again.");
+			createBucket();
+		}
         
     }
     
     private static void listBuckets(){
+    	
+    	//Lists all buckets on the server
     	
     	System.out.println("List Buckets: ");
         System.out.println("--------------------------");
@@ -174,12 +186,16 @@ public class CreateCredentials {
     
     private static void createObject() throws Exception{
     	
+    	//First it lists all the buckets
+    	//Then it asks for credentials
+    	
     	System.out.println("Create Object: ");
         System.out.println("--------------------------");
         
         
         System.out.println("Please choose a bucket: ");
         
+        //lists buckets
     	int count = 1;
     	for (Bucket bucket : s3.listBuckets()) {
             System.out.println(count + ") - " + bucket.getName());
@@ -187,12 +203,17 @@ public class CreateCredentials {
         }
     	
     	Scanner scn = new Scanner(System.in); 
-		int optionB = scn.nextInt();
+    	try {
+			optionB = scn.nextInt();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+		}
 		
 		if(optionB > count - 1 || optionB < 1){
 			System.out.println("Please select a proper bucket");
 			createObject();
 		}
+		//gets the buckets name
 		else{
 	    	count = 1;
 	    	String currentBucket = null;
@@ -202,6 +223,7 @@ public class CreateCredentials {
 	            }
 	            count++;
 	        }
+	    	//asks for credentials
 	    	System.out.println("Enter your first name: ");
 	    	scn = new Scanner(System.in); 
 	    	fName = scn.nextLine();
@@ -210,35 +232,54 @@ public class CreateCredentials {
 	    	System.out.println("Phone Number: xxx-xxx-xxxx");
 	    	pNumber = scn.nextLine();
 			System.out.println("Uploading a new object to S3 from a file\n");
-			key = "mycredentials-" + fName;
+			key = "mycredentials-" + fName.toLowerCase() + ".html";
 	        s3.putObject(new PutObjectRequest(currentBucket, key, createCredentialsFile(fName, lName, pNumber)));
 		}
         System.out.println();
     }
     
     private static File createCredentialsFile(String fName, String lName, String pNumber) throws IOException {
-        File file = File.createTempFile("mycredentials", ".html");
+        
+    	//this method created an html file with the users credentials
+    	File file = File.createTempFile("mycredentials", ".html");
         file.deleteOnExit();
 
-        Writer writer = new OutputStreamWriter(new FileOutputStream(file));
-        writer.write("<h1>My Credentials</h1>");
-        writer.write("<table border='1'>");
-        writer.write("<tr>");
-        writer.write("<td><strong>First Name</strong></td>");
-        writer.write("<td><strong>Last Name</strong></td>");
-        writer.write("<td><strong>Phone Number</strong></td>");
-        writer.write("</tr>");
-        writer.write("<tr>");
-        writer.write("<td>" + fName + "</td>");
-        writer.write("<td>" + lName + "</td>");
-        writer.write("<td>" + pNumber + "</td>");
-        writer.close();
+        FileWriter fr = new FileWriter(file);
+		br = new BufferedWriter(fr);
+        br.write("<h1>My Credentials</h1>");
+        br.newLine();
+        br.write("<img src='http://d3r6vrqzwazs3l.cloudfront.net/hlaurie.jpg' alt='logo' height='120' width='120'>");
+        br.newLine();
+        br.write("<table border='1'>");
+        br.newLine();
+        br.write("<tr>");
+        br.newLine();
+        br.write("<td><strong>First Name</strong></td>");
+        br.newLine();
+        br.write("<td><strong>Last Name</strong></td>");
+        br.newLine();
+        br.write("<td><strong>Phone Number</strong></td>");
+        br.newLine();
+        br.write("</tr>");
+        br.newLine();
+        br.write("<tr>");
+        br.newLine();
+        br.write("<td>" + fName + "</td>");
+        br.newLine();
+        br.write("<td>" + lName + "</td>");
+        br.newLine();
+        br.write("<td>" + pNumber + "</td>");
+        br.close();
         
 
         return file;
     }
     
     private static void editObject() throws Exception{
+    	
+    	//First lists the buckets
+    	//then lists all objects on bucket
+    	//once object is selected, promps user for credentials
     	
     	System.out.println("Edit Object ");
         System.out.println("--------------------------");
@@ -252,7 +293,13 @@ public class CreateCredentials {
         }
     	
     	Scanner scn = new Scanner(System.in); 
-		int optionB = scn.nextInt();
+    	try {
+			optionB = scn.nextInt();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			System.err.println("Please select a proper option");
+			editObject();
+		}
 		
 		if(optionB > count - 1 || optionB < 1){
 			System.out.println("Please select a proper bucket");
@@ -272,7 +319,7 @@ public class CreateCredentials {
 	        
 	        ObjectListing objectListing = s3.listObjects(new ListObjectsRequest()
             .withBucketName(currentBucket)
-            .withPrefix("my"));
+            .withPrefix(""));
 	    	 count = 1;
 	    	 for (S3ObjectSummary objectSummary : objectListing.getObjectSummaries()) {
 	    		 System.out.println(count + ") - " + objectSummary.getKey() + "  " +
@@ -281,8 +328,13 @@ public class CreateCredentials {
 	    	 }
 	    	
 	    	scn = new Scanner(System.in); 
-			optionB = scn.nextInt();
-			
+	    	try {
+				optionB = scn.nextInt();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				System.err.println("Please select a proper option");
+				editObject();
+			}			
 			if(optionB > count - 1 || optionB < 1){
 				System.out.println("Please select a proper Object");
 				editObject();
@@ -290,7 +342,8 @@ public class CreateCredentials {
 			else{
 		    	count = 1;
 		    	String currentObject = null;
-		    	for (S3ObjectSummary objectSummary : objectListing.getObjectSummaries()) {		            if(count == optionB){
+		    	for (S3ObjectSummary objectSummary : objectListing.getObjectSummaries()) {		            
+		    		if(count == optionB){
 		            	currentObject = objectSummary.getKey();
 		            }
 		            count++;
@@ -326,11 +379,16 @@ public class CreateCredentials {
         }
     	
     	Scanner scn = new Scanner(System.in); 
-		int optionB = scn.nextInt();
-		
+    	try {
+			optionB = scn.nextInt();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			System.err.println("Please select a proper option");
+			deleteObject();
+		}		
 		if(optionB > count - 1 || optionB < 1){
 			System.out.println("Please select a proper bucket");
-			editObject();
+			deleteObject();
 		}
 		else{
 	    	count = 1;
@@ -347,7 +405,7 @@ public class CreateCredentials {
 	        
 	        ObjectListing objectListing = s3.listObjects(new ListObjectsRequest()
             .withBucketName(currentBucket)
-            .withPrefix("my"));
+            .withPrefix(""));
 	    	 count = 1;
 	    	 for (S3ObjectSummary objectSummary : objectListing.getObjectSummaries()) {
 	    		 System.out.println(count + ") - " + objectSummary.getKey() + "  " +
@@ -356,16 +414,22 @@ public class CreateCredentials {
 	    	 }
 	    	
 	    	scn = new Scanner(System.in); 
-			optionB = scn.nextInt();
-			
+	    	try {
+				optionB = scn.nextInt();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				System.err.println("Please select a proper option");
+				deleteObject();
+			}			
 			if(optionB > count - 1 || optionB < 1){
 				System.out.println("Please select a proper Object");
-				editObject();
+				deleteObject();
 			}
 			else{
 		    	count = 1;
 		    	String currentObject = null;
-		    	for (S3ObjectSummary objectSummary : objectListing.getObjectSummaries()) {		            if(count == optionB){
+		    	for (S3ObjectSummary objectSummary : objectListing.getObjectSummaries()) {		            
+		    		if(count == optionB){
 		            	currentObject = objectSummary.getKey();
 		            }
 		            count++;
@@ -395,8 +459,13 @@ public class CreateCredentials {
         }
     	
     	Scanner scn = new Scanner(System.in); 
-		int optionB = scn.nextInt();
-		
+    	try {
+			optionB = scn.nextInt();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			System.err.println("Please select a proper option");
+			deleteBucket();
+		}		
 		if(optionB > count - 1 || optionB < 1){
 			System.out.println("Please select a proper bucket");
 			deleteBucket();
