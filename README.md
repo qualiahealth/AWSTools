@@ -1,4 +1,4 @@
 AWSTools
 ========
 
-Create, Add, Delete AWS S3 Buckets/Objects
+Create, Delete, Edit AWS S3 Buckets/Objects
